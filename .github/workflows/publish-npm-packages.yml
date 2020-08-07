@@ -3,7 +3,7 @@ name: Publish NPM Packages
 on:
   push:
     branches:
-      - develop
+      - test-publish
 
 jobs:
   styleguide:
@@ -23,6 +23,7 @@ jobs:
         run: |
           yarn
           ./tools/bin/make_workspace_public styleguide
+          ./tools/bin/change_workspace_name styleguide
 
       - name: Determine if publish is necessary
         id: helper
@@ -56,6 +57,7 @@ jobs:
         run: |
           yarn
           ./tools/bin/make_workspace_public tools/json-api-client
+          ./tools/bin/change_workspace_name tools/json-api-client
 
       - name: Determine if publish is necessary
         id: helper
@@ -89,6 +91,7 @@ jobs:
         run: |
           yarn
           ./tools/bin/make_workspace_public tools/local-storage
+          ./tools/bin/change_workspace_name tools/local-storage
 
       - name: Determine if publish is necessary
         id: helper
@@ -122,6 +125,7 @@ jobs:
         run: |
           yarn
           ./tools/bin/make_workspace_public tools/redux
+          ./tools/bin/change_workspace_name tools/redux
 
       - name: Determine if publish is necessary
         id: helper
@@ -155,6 +159,7 @@ jobs:
         run: |
           yarn
           ./tools/bin/make_workspace_public tools/ts-helpers
+          ./tools/bin/change_workspace_name tools/ts-helpers
 
       - name: Determine if publish is necessary
         id: helper
