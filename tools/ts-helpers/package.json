@@ -9,11 +9,16 @@
   },
   "scripts": {
     "setup": "tsc -b",
-    "clean": "tsc -b --clean"
+    "clean": "tsc -b --clean",
+    "prepublishOnly": "yarn clean && yarn setup && rm dist/tsconfig.tsbuildinfo"
   },
   "peerDependencies": {},
   "dependencies": {
     "typescript": "^3.7.4"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "files": [
+    "package.json",
+    "dist"
+  ]
 }
