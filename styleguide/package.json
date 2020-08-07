@@ -14,7 +14,8 @@
     "setup": "tsc -b",
     "clean": "tsc -b --clean",
     "test": "jest",
-    "test:ci": "yarn test --coverage --reporters jest-silent-reporter --maxWorkers=50%"
+    "test:ci": "yarn test --coverage --reporters jest-silent-reporter --maxWorkers=50%",
+    "prepublishOnly": "yarn test:ci && yarn clean && yarn setup && rm dist/tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@material-ui/core": "^3.9.2",
@@ -53,5 +54,9 @@
     "react-docgen-typescript-loader": "^3.7.2",
     "ts-jest": "^24.1.0",
     "webpack": "4.41.2"
-  }
+  },
+  "files": [
+    "package.json",
+    "dist"
+  ]
 }
