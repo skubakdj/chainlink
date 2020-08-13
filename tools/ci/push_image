@@ -37,8 +37,8 @@ image_name="$3"
 tag_and_push() {
   # ie: docker tag and push smartcontract/<image>:0.9.1, since DOCKER_TAG=0.9.1
   docker_tag=$1
-  docker tag smartcontract/${image_name}:circleci smartcontract/${image_name}:${docker_tag}
-  docker push smartcontract/${image_name}:${docker_tag}
+  docker tag testing4638/${image_name}:circleci testing4638/${image_name}:${docker_tag}
+  docker push testing4638/${image_name}:${docker_tag}
 }
 
 branch_tag=`tools/ci/branch2tag ${circle_branch}` # ie: develop, latest, candidate-*, etc.
