@@ -219,9 +219,13 @@ func TestClient_RunNodeWithAPICredentialsFile(t *testing.T) {
 func TestClient_ImportKey(t *testing.T) {
 	t.Parallel()
 
-	app, cleanup := cltest.NewApplication(t, cltest.EthMockRegisterChainID)
+	app, cleanup := cltest.NewApplication(t,
+		cltest.AllowUnstarted,
+		cltest.LenientEthMock,
+		cltest.EthMockRegisterChainID,
+		cltest.EthMockRegisterGetBalance,
+	)
 	defer cleanup()
-	require.NoError(t, app.Start())
 
 	client, _ := app.NewClientAndRenderer()
 
@@ -318,8 +322,8 @@ func TestClient_RebroadcastTransactions_BPTXM(t *testing.T) {
 	app := new(mocks.Application)
 	app.On("GetStore").Return(store)
 	app.On("Stop").Return(nil)
-	gethClient := new(mocks.GethClient)
-	store.GethClientWrapper = cltest.NewSimpleGethWrapper(gethClient)
+	ethClient := new(mocks.Client)
+	store.EthClient = ethClient
 
 	auth := cltest.CallbackAuthenticator{Callback: func(*strpkg.Store, string) (string, error) { return "", nil }}
 	client := cmd.Client{
@@ -334,7 +338,7 @@ func TestClient_RebroadcastTransactions_BPTXM(t *testing.T) {
 
 	for i := beginningNonce; i <= endingNonce; i++ {
 		n := i
-		gethClient.On("SendTransaction", mock.Anything, mock.MatchedBy(func(tx *gethTypes.Transaction) bool {
+		ethClient.On("SendTransaction", mock.Anything, mock.MatchedBy(func(tx *gethTypes.Transaction) bool {
 			return uint(tx.Nonce()) == n
 		})).Once().Return(nil)
 	}
@@ -346,7 +350,7 @@ func TestClient_RebroadcastTransactions_BPTXM(t *testing.T) {
 	assert.Equal(t, orm.DialectPostgresWithoutLock, config.Config.GetDatabaseDialectConfiguredOrDefault())
 
 	app.AssertExpectations(t)
-	gethClient.AssertExpectations(t)
+	ethClient.AssertExpectations(t)
 }
 
 func TestClient_RebroadcastTransactions_WithinRange(t *testing.T) {
@@ -531,4 +535,38 @@ func TestClient_SetNextNonce(t *testing.T) {
 	require.NoError(t, store.DB.First(&key).Error)
 	require.NotNil(t, key.NextNonce)
 	require.Equal(t, int64(42), *key.NextNonce)
+}
+
+func TestClient_P2P_CreateKey(t *testing.T) {
+	t.Parallel()
+	store, cleanup := cltest.NewStore(t)
+	defer cleanup()
+
+	app := new(mocks.Application)
+	app.On("GetStore").Return(store)
+
+	auth := cltest.CallbackAuthenticator{}
+	apiPrompt := &cltest.MockAPIInitializer{}
+	client := cmd.Client{
+		Config:                 store.Config,
+		AppFactory:             cltest.InstanceAppFactory{App: app},
+		KeyStoreAuthenticator:  auth,
+		FallbackAPIInitializer: apiPrompt,
+		Runner:                 cltest.EmptyRunner{},
+	}
+
+	set := flag.NewFlagSet("test", 0)
+	set.String("password", "../internal/fixtures/correct_password.txt", "")
+	c := cli.NewContext(nil, set, nil)
+
+	require.NoError(t, client.CreateP2PKey(c))
+
+	keys, err := app.GetStore().FindEncryptedP2PKeys()
+	require.NoError(t, err)
+
+	require.Len(t, keys, 1)
+
+	e := keys[0]
+	_, err = e.Decrypt(cltest.Password)
+	require.NoError(t, err)
 }

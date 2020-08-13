@@ -105,18 +105,6 @@ describe('AggregatorProxy', () => {
     it('pulls the rate from the aggregator', async () => {
       matchers.bigNum(phaseBase.add(1), await proxy.latestRound())
     })
-
-    describe('when the relevant info is not available', () => {
-      beforeEach(async () => {
-        await proxy.proposeAggregator(flux.address)
-        await proxy.confirmAggregator(flux.address)
-      })
-
-      it('does not revert', async () => {
-        const actual = await proxy.latestRound()
-        matchers.bigNum(0, actual)
-      })
-    })
   })
 
   describe('#latestAnswer', () => {
@@ -211,6 +199,25 @@ describe('AggregatorProxy', () => {
         matchers.bigNum(preUpdateAnswer, actualAnswer)
       })
     })
+
+    describe('when the relevant info is not available', () => {
+      it('returns 0', async () => {
+        const actual = await proxy.getAnswer(phaseBase.mul(777))
+        matchers.bigNum(0, actual)
+      })
+    })
+
+    describe('when the round ID is too large', () => {
+      const overflowRoundId = h
+        .bigNum(2)
+        .pow(255)
+        .add(phaseBase) // get the original phase
+        .add(1) // get the original round
+      it('returns 0', async () => {
+        const actual = await proxy.getTimestamp(overflowRoundId)
+        matchers.bigNum(0, actual)
+      })
+    })
   })
 
   describe('#getTimestamp', () => {
@@ -223,6 +230,26 @@ describe('AggregatorProxy', () => {
       it('does not revert when called with a non existent ID', async () => {
         const proxyId = phaseBase.mul(await proxy.phaseId()).add(1)
         const actual = await proxy.getTimestamp(proxyId)
+        matchers.bigNum(0, actual)
+      })
+    })
+
+    describe('when the relevant info is not available', () => {
+      it('returns 0', async () => {
+        const actual = await proxy.getTimestamp(phaseBase.mul(777))
+        matchers.bigNum(0, actual)
+      })
+    })
+
+    describe('when the round ID is too large', () => {
+      const overflowRoundId = h
+        .bigNum(2)
+        .pow(255)
+        .add(phaseBase) // get the original phase
+        .add(1) // get the original round
+
+      it('returns 0', async () => {
+        const actual = await proxy.getTimestamp(overflowRoundId)
         matchers.bigNum(0, actual)
       })
     })
@@ -277,18 +304,6 @@ describe('AggregatorProxy', () => {
           await aggregator2.latestTimestamp(),
           await proxy.getTimestamp(latestRound),
         )
-      })
-    })
-
-    describe('when the relevant info is not available', () => {
-      beforeEach(async () => {
-        await proxy.proposeAggregator(flux.address)
-        await proxy.confirmAggregator(flux.address)
-      })
-
-      it('does not revert', async () => {
-        const actual = await proxy.latestTimestamp()
-        matchers.bigNum(0, actual)
       })
     })
   })

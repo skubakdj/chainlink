@@ -20,6 +20,7 @@ import (
 	"github.com/smartcontractkit/chainlink/core/logger"
 	"github.com/smartcontractkit/chainlink/core/store/dbutil"
 	"github.com/smartcontractkit/chainlink/core/store/models"
+	"github.com/smartcontractkit/chainlink/core/store/models/p2pkey"
 	"github.com/smartcontractkit/chainlink/core/store/models/vrfkey"
 	"github.com/smartcontractkit/chainlink/core/utils"
 
@@ -232,7 +233,7 @@ func (orm *ORM) FindJobRun(id *models.ID) (models.JobRun, error) {
 }
 
 // AllSyncEvents returns all sync events
-func (orm *ORM) AllSyncEvents(cb func(*models.SyncEvent) error) error {
+func (orm *ORM) AllSyncEvents(cb func(models.SyncEvent) error) error {
 	orm.MustEnsureAdvisoryLock()
 	return Batch(BatchSize, func(offset, limit uint) (uint, error) {
 		var events []models.SyncEvent
@@ -246,7 +247,7 @@ func (orm *ORM) AllSyncEvents(cb func(*models.SyncEvent) error) error {
 		}
 
 		for _, event := range events {
-			err = cb(&event)
+			err = cb(event)
 			if err != nil {
 				return 0, err
 			}
@@ -821,7 +822,7 @@ func (orm *ORM) GetLastNonce(address common.Address) (uint64, error) {
 }
 
 // MarkRan will set Ran to true for a given initiator
-func (orm *ORM) MarkRan(i *models.Initiator, ran bool) error {
+func (orm *ORM) MarkRan(i models.Initiator, ran bool) error {
 	orm.MustEnsureAdvisoryLock()
 	return orm.convenientTransaction(func(dbtx *gorm.DB) error {
 		var newi models.Initiator
@@ -1261,26 +1262,30 @@ func (orm *ORM) DeleteKey(address []byte) error {
 	return orm.DB.Exec("DELETE FROM keys WHERE address = ?", address).Error
 }
 
-// UpsertKey inserts a key if a key with that address doesn't exist already
-// If a key with this address exists, it overwrites the JSON
-func (orm *ORM) UpsertKey(k models.Key) error {
+// CreateKeyIfNotExists inserts a key if a key with that address doesn't exist already
+// If a key with this address exists, it does nothing
+func (orm *ORM) CreateKeyIfNotExists(k models.Key) error {
 	orm.MustEnsureAdvisoryLock()
-	return orm.DB.Set("gorm:insert_option", "ON CONFLICT (address) DO UPDATE SET json=EXCLUDED.json, updated_at=NOW()").Create(&k).Error
+	err := orm.DB.Set("gorm:insert_option", "ON CONFLICT (address) DO NOTHING").Create(&k).Error
+	if err == nil || err.Error() == "sql: no rows in result set" {
+		return nil
+	}
+	return err
 }
 
-// FirstOrCreateEncryptedSecretKey returns the first key found or creates a new one in the orm.
-func (orm *ORM) FirstOrCreateEncryptedSecretVRFKey(k *vrfkey.EncryptedSecretKey) error {
+// FirstOrCreateEncryptedVRFKey returns the first key found or creates a new one in the orm.
+func (orm *ORM) FirstOrCreateEncryptedSecretVRFKey(k *vrfkey.EncryptedVRFKey) error {
 	return orm.DB.FirstOrCreate(k).Error
 }
 
-// DeleteEncryptedSecretKey deletes k from the encrypted keys table, or errors
-func (orm *ORM) DeleteEncryptedSecretVRFKey(k *vrfkey.EncryptedSecretKey) error {
+// DeleteEncryptedVRFKey deletes k from the encrypted keys table, or errors
+func (orm *ORM) DeleteEncryptedSecretVRFKey(k *vrfkey.EncryptedVRFKey) error {
 	return orm.DB.Delete(k).Error
 }
 
-// FindEncryptedSecretKeys retrieves matches to where from the encrypted keys table, or errors
-func (orm *ORM) FindEncryptedSecretVRFKeys(where ...vrfkey.EncryptedSecretKey) (
-	retrieved []*vrfkey.EncryptedSecretKey, err error) {
+// FindEncryptedVRFKeys retrieves matches to where from the encrypted keys table, or errors
+func (orm *ORM) FindEncryptedSecretVRFKeys(where ...vrfkey.EncryptedVRFKey) (
+	retrieved []*vrfkey.EncryptedVRFKey, err error) {
 	orm.MustEnsureAdvisoryLock()
 	var anonWhere []interface{} // Find needs "where" contents coerced to interface{}
 	for _, constraint := range where {
@@ -1288,6 +1293,14 @@ func (orm *ORM) FindEncryptedSecretVRFKeys(where ...vrfkey.EncryptedSecretKey) (
 		anonWhere = append(anonWhere, &c)
 	}
 	return retrieved, orm.DB.Find(&retrieved, anonWhere...).Error
+}
+
+func (orm *ORM) UpsertEncryptedP2PKey(k *p2pkey.EncryptedP2PKey) error {
+	return orm.DB.Set("gorm:insert_option", "ON CONFLICT (pub_key) DO UPDATE SET encrypted_priv_key=EXCLUDED.encrypted_priv_key, updated_at=NOW()").Create(k).Error
+}
+
+func (orm *ORM) FindEncryptedP2PKeys() (keys []p2pkey.EncryptedP2PKey, err error) {
+	return keys, orm.DB.Find(&keys).Error
 }
 
 // GetRoundRobinAddress queries the database for the address of a random ethereum key derived from the id.
@@ -1337,17 +1350,7 @@ func (orm *ORM) GetRoundRobinAddress(addresses ...common.Address) (address commo
 }
 
 // HasConsumedLog reports whether the given consumer had already consumed the given log
-func (orm *ORM) HasConsumedLog(rawLog models.RawLog, JobID *models.ID) (bool, error) {
-	lc := models.LogConsumption{
-		BlockHash: rawLog.GetBlockHash(),
-		LogIndex:  rawLog.GetIndex(),
-		JobID:     JobID,
-	}
-	return orm.LogConsumptionExists(&lc)
-}
-
-// LogConsumptionExists reports whether a given LogConsumption record already exists
-func (orm *ORM) LogConsumptionExists(lc *models.LogConsumption) (bool, error) {
+func (orm *ORM) HasConsumedLog(blockHash common.Hash, logIndex uint, jobID *models.ID) (bool, error) {
 	query := "SELECT exists (" +
 		"SELECT id FROM log_consumptions " +
 		"WHERE block_hash=$1 " +
@@ -1357,7 +1360,7 @@ func (orm *ORM) LogConsumptionExists(lc *models.LogConsumption) (bool, error) {
 
 	var exists bool
 	err := orm.DB.DB().
-		QueryRow(query, lc.BlockHash, lc.LogIndex, lc.JobID).
+		QueryRow(query, blockHash, logIndex, jobID).
 		Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
@@ -1365,19 +1368,14 @@ func (orm *ORM) LogConsumptionExists(lc *models.LogConsumption) (bool, error) {
 	return exists, nil
 }
 
-// CreateLogConsumption creates a new LogConsumption record
-func (orm *ORM) CreateLogConsumption(lc *models.LogConsumption) error {
+// MarkLogConsumed creates a new LogConsumption record
+func (orm *ORM) MarkLogConsumed(blockHash common.Hash, logIndex uint, jobID *models.ID) error {
 	orm.MustEnsureAdvisoryLock()
-	return orm.DB.Create(lc).Error
+	lc := models.NewLogConsumption(blockHash, logIndex, jobID)
+	return orm.DB.Create(&lc).Error
 }
 
-// FindLogConsumer finds the consuming job of a particular LogConsumption record
-func (orm *ORM) FindLogConsumer(lc *models.LogConsumption) (models.JobSpec, error) {
-	orm.MustEnsureAdvisoryLock()
-	return orm.FindJob(lc.JobID)
-}
-
-// FindOrCreateFluxMonitorRoundStats find the round stats record for agiven oracle on a given round, or creates
+// FindOrCreateFluxMonitorRoundStats find the round stats record for a given oracle on a given round, or creates
 // it if no record exists
 func (orm *ORM) FindOrCreateFluxMonitorRoundStats(aggregator common.Address, roundID uint32) (models.FluxMonitorRoundStats, error) {
 	orm.MustEnsureAdvisoryLock()
@@ -1409,7 +1407,7 @@ func (orm *ORM) MostRecentFluxMonitorRoundID(aggregator common.Address) (uint32,
 	return stats.RoundID, nil
 }
 
-// IncrFluxMonitorRoundSubmissions trys to create a RoundStat record for the given oracle
+// IncrFluxMonitorRoundSubmissions trys to create a RoundStats record for the given oracle
 // at the given round. If one already exists, it increments the num_submissions column.
 func (orm *ORM) IncrFluxMonitorRoundSubmissions(aggregator common.Address, roundID uint32) error {
 	orm.MustEnsureAdvisoryLock()

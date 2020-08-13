@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/big"
 	"regexp"
@@ -17,6 +18,7 @@ import (
 	"github.com/smartcontractkit/chainlink/core/store/orm"
 	"github.com/smartcontractkit/chainlink/core/utils"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -71,9 +73,9 @@ type TxManager interface {
 	CreateTx(to common.Address, data []byte) (*models.Tx, error)
 	CreateTxWithGas(surrogateID null.String, to common.Address, data []byte, gasPriceWei *big.Int, gasLimit uint64) (*models.Tx, error)
 	CreateTxWithEth(from, to common.Address, value *assets.Eth) (*models.Tx, error)
-	CheckAttempt(txAttempt *models.TxAttempt, blockHeight uint64) (*models.TxReceipt, AttemptState, error)
+	CheckAttempt(txAttempt *models.TxAttempt, blockHeight uint64) (*types.Receipt, AttemptState, error)
 
-	BumpGasUntilSafe(hash common.Hash) (*models.TxReceipt, AttemptState, error)
+	BumpGasUntilSafe(hash common.Hash) (*types.Receipt, AttemptState, error)
 
 	ContractLINKBalance(wr models.WithdrawalRequest) (assets.Link, error)
 	GetLINKBalance(address common.Address) (*assets.Link, error)
@@ -97,18 +99,20 @@ type EthTxManager struct {
 	accountsMutex       *sync.Mutex
 	connected           *abool.AtomicBool
 	currentHead         models.Head
+	currentHeadMtx      *sync.RWMutex
 }
 
 // NewEthTxManager constructs an EthTxManager using the passed variables and
 // initializing internal variables.
 func NewEthTxManager(client eth.Client, config orm.ConfigReader, keyStore KeyStoreInterface, orm *orm.ORM) *EthTxManager {
 	return &EthTxManager{
-		Client:        client,
-		config:        config,
-		keyStore:      keyStore,
-		orm:           orm,
-		accountsMutex: &sync.Mutex{},
-		connected:     abool.New(),
+		Client:         client,
+		config:         config,
+		keyStore:       keyStore,
+		orm:            orm,
+		accountsMutex:  &sync.Mutex{},
+		connected:      abool.New(),
+		currentHeadMtx: new(sync.RWMutex),
 	}
 }
 
@@ -149,7 +153,7 @@ func (txm *EthTxManager) Connect(bn *models.Head) error {
 		}
 
 		if bn != nil {
-			txm.currentHead = *bn
+			txm.setCurrentHead(*bn)
 		}
 		txm.connected.Set()
 	}()
@@ -197,7 +201,19 @@ func (txm *EthTxManager) OnNewLongestChain(head models.Head) {
 	if txm.config.EnableBulletproofTxManager() {
 		return
 	}
+	txm.setCurrentHead(head)
+}
+
+func (txm *EthTxManager) setCurrentHead(head models.Head) {
+	txm.currentHeadMtx.Lock()
+	defer txm.currentHeadMtx.Unlock()
 	txm.currentHead = head
+}
+
+func (txm *EthTxManager) getCurrentHead() models.Head {
+	txm.currentHeadMtx.RLock()
+	defer txm.currentHeadMtx.RUnlock()
+	return txm.currentHead
 }
 
 // CreateTx signs and sends a transaction to the Ethereum blockchain.
@@ -240,19 +256,7 @@ func (txm *EthTxManager) nextAccount() (*ManagedAccount, error) {
 }
 
 func normalizeGasParams(gasPriceWei *big.Int, gasLimit uint64, config orm.ConfigReader) (*big.Int, uint64) {
-	if !config.Dev() {
-		return config.EthGasPriceDefault(), config.EthGasLimitDefault()
-	}
-
-	if gasPriceWei == nil {
-		gasPriceWei = config.EthGasPriceDefault()
-	}
-
-	if gasLimit == 0 {
-		gasLimit = config.EthGasLimitDefault()
-	}
-
-	return gasPriceWei, gasLimit
+	return config.EthGasPriceDefault(), config.EthGasLimitDefault()
 }
 
 // createTx creates an ethereum transaction, and retries to submit the
@@ -316,7 +320,7 @@ func (txm *EthTxManager) sendInitialTx(
 	var tx *models.Tx
 
 	err = ma.GetAndIncrementNonce(func(nonce uint64) error {
-		blockHeight := uint64(txm.currentHead.Number)
+		blockHeight := uint64(txm.getCurrentHead().Number)
 		tx, err = txm.newTx(
 			ma.Account,
 			nonce,
@@ -441,7 +445,7 @@ func (txm *EthTxManager) GetLINKBalance(address common.Address) (*assets.Link, e
 
 // BumpGasUntilSafe process a collection of related TxAttempts, trying to get
 // at least one TxAttempt into a safe state, bumping gas if needed
-func (txm *EthTxManager) BumpGasUntilSafe(hash common.Hash) (*models.TxReceipt, AttemptState, error) {
+func (txm *EthTxManager) BumpGasUntilSafe(hash common.Hash) (*types.Receipt, AttemptState, error) {
 	tx, _, err := txm.orm.FindTxByAttempt(hash)
 	if err != nil {
 		return nil, Unknown, errors.Wrap(err, "BumpGasUntilSafe FindTxByAttempt")
@@ -455,8 +459,8 @@ func (txm *EthTxManager) BumpGasUntilSafe(hash common.Hash) (*models.TxReceipt, 
 	return txm.checkAccountForConfirmation(tx)
 }
 
-func (txm *EthTxManager) checkChainForConfirmation(tx *models.Tx) (*models.TxReceipt, AttemptState, error) {
-	blockHeight := uint64(txm.currentHead.Number)
+func (txm *EthTxManager) checkChainForConfirmation(tx *models.Tx) (*types.Receipt, AttemptState, error) {
+	blockHeight := uint64(txm.getCurrentHead().Number)
 
 	var merr error
 	// Process attempts in reverse, since the attempt with the highest gas is
@@ -472,7 +476,7 @@ func (txm *EthTxManager) checkChainForConfirmation(tx *models.Tx) (*models.TxRec
 	return nil, Unconfirmed, merr
 }
 
-func (txm *EthTxManager) checkAccountForConfirmation(tx *models.Tx) (*models.TxReceipt, AttemptState, error) {
+func (txm *EthTxManager) checkAccountForConfirmation(tx *models.Tx) (*types.Receipt, AttemptState, error) {
 	ma := txm.GetAvailableAccount(tx.From)
 
 	if ma != nil && ma.lastSafeNonce > tx.Nonce {
@@ -521,18 +525,20 @@ func (txm *EthTxManager) ContractLINKBalance(wr models.WithdrawalRequest) (asset
 
 // CheckAttempt retrieves a receipt for a TxAttempt, and check if it meets the
 // minimum number of confirmations
-func (txm *EthTxManager) CheckAttempt(txAttempt *models.TxAttempt, blockHeight uint64) (*models.TxReceipt, AttemptState, error) {
-	receipt, err := txm.GetTxReceipt(txAttempt.Hash)
-	if err != nil {
-		return nil, Unknown, errors.Wrap(err, "CheckAttempt GetTxReceipt failed")
+func (txm *EthTxManager) CheckAttempt(txAttempt *models.TxAttempt, blockHeight uint64) (*types.Receipt, AttemptState, error) {
+	receipt, err := txm.TransactionReceipt(context.TODO(), txAttempt.Hash)
+	if errors.Cause(err) == ethereum.NotFound {
+		return nil, Unconfirmed, nil
+	} else if err != nil {
+		return nil, Unknown, errors.Wrap(err, "CheckAttempt TransactionReceipt failed")
 	}
 
-	if receipt.Unconfirmed() {
+	if models.ReceiptIsUnconfirmed(receipt) {
 		return receipt, Unconfirmed, nil
 	}
 
 	minimumConfirmations := new(big.Int).SetUint64(txm.config.MinRequiredOutgoingConfirmations())
-	confirmedAt := new(big.Int).Add(minimumConfirmations, receipt.BlockNumber.ToInt())
+	confirmedAt := new(big.Int).Add(minimumConfirmations, receipt.BlockNumber)
 
 	confirmedAt.Sub(confirmedAt, big.NewInt(1)) // confirmed at block counts as 1 conf
 
@@ -582,7 +588,7 @@ func (txm *EthTxManager) processAttempt(
 	tx *models.Tx,
 	attemptIndex int,
 	blockHeight uint64,
-) (*models.TxReceipt, AttemptState, error) {
+) (*types.Receipt, AttemptState, error) {
 	jobRunID := tx.SurrogateID.ValueOrZero()
 	txAttempt := tx.Attempts[attemptIndex]
 
@@ -598,9 +604,9 @@ func (txm *EthTxManager) processAttempt(
 			fmt.Sprintf("Tx #%d is %s", attemptIndex, state),
 			"txHash", txAttempt.Hash.String(),
 			"txID", txAttempt.TxID,
-			"receiptBlockNumber", receipt.BlockNumber.ToInt(),
+			"receiptBlockNumber", receipt.BlockNumber,
 			"currentBlockNumber", blockHeight,
-			"receiptHash", receipt.Hash.Hex(),
+			"receiptHash", receipt.TxHash.Hex(),
 			"jobRunId", jobRunID,
 		)
 
@@ -850,7 +856,7 @@ func (txm *EthTxManager) getAccount(from common.Address) *ManagedAccount {
 // ActivateAccount retrieves an account's nonce from the blockchain for client
 // side management in ManagedAccount.
 func (txm *EthTxManager) activateAccount(account accounts.Account) (*ManagedAccount, error) {
-	nonce, err := txm.GetNonce(account.Address)
+	nonce, err := txm.PendingNonceAt(context.TODO(), account.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -882,7 +888,7 @@ func (a *ManagedAccount) Nonce() uint64 {
 func (a *ManagedAccount) ReloadNonce(txm *EthTxManager) error {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	nonce, err := txm.GetNonce(a.Address)
+	nonce, err := txm.PendingNonceAt(context.TODO(), a.Address)
 	if err != nil {
 		return fmt.Errorf("TxManager ReloadNonce: %v", err)
 	}

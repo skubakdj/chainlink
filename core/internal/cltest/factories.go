@@ -171,6 +171,19 @@ func NewJobWithFluxMonitorInitiatorWithBridge() models.JobSpec {
 	return j
 }
 
+// NewJobWithRandomnessLog create new Job with VRF initiator
+func NewJobWithRandomnessLog() models.JobSpec {
+	j := NewJob()
+	j.Initiators = []models.Initiator{{
+		JobSpecID: j.ID,
+		Type:      models.InitiatorRandomnessLog,
+		InitiatorParams: models.InitiatorParams{
+			Address: NewAddress(),
+		},
+	}}
+	return j
+}
+
 // NewTx returns a Tx using a specified from address and sentAt
 func NewTx(from common.Address, sentAt uint64) *models.Tx {
 	tx := &models.Tx{
@@ -607,7 +620,7 @@ func NewPollingDeviationChecker(t *testing.T, s *strpkg.Store) *fluxmonitor.Poll
 	return checker
 }
 
-func NewEthHeader(height interface{}) types.Header {
+func NewGethHeader(height interface{}) *types.Header {
 	var h int64
 	switch v := height.(type) {
 	case int64:
@@ -620,10 +633,19 @@ func NewEthHeader(height interface{}) types.Header {
 		panic(fmt.Sprintf("invalid type: %t", height))
 	}
 
-	return types.Header{
+	return &types.Header{
 		Number:     big.NewInt(h),
 		ParentHash: NewHash(),
 		Time:       uint64(time.Now().Unix()),
+	}
+}
+
+func NewHeadFromGethHeader(gethHeader *types.Header) *models.Head {
+	return &models.Head{
+		Hash:       NewHash(),
+		Number:     gethHeader.Number.Int64(),
+		ParentHash: gethHeader.ParentHash,
+		Timestamp:  time.Unix(int64(gethHeader.Time), 0),
 	}
 }
 
@@ -751,6 +773,6 @@ func MustInsertFatalErrorEthTx(t *testing.T, store *strpkg.Store) models.EthTx {
 
 func MustInsertRandomKey(t *testing.T, store *strpkg.Store) models.Key {
 	k := models.Key{Address: models.EIP55Address(NewAddress().Hex()), JSON: JSONFromString(t, `{"key": "factory"}`)}
-	require.NoError(t, store.UpsertKey(k))
+	require.NoError(t, store.CreateKeyIfNotExists(k))
 	return k
 }
