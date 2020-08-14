@@ -152,7 +152,6 @@ If you do end up modifying the migrations for the database, you will need to rer
 go test -parallel=1 ./...
 ```
 
-
 ### Solidity Development
 
 1. [Install Yarn](https://yarnpkg.com/lang/en/docs/install)
