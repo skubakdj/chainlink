@@ -140,6 +140,7 @@ export CHAINLINK_DEV=true # I prefer to use direnv and skip this
 ```
 
 6.  Drop/Create test database and run migrations:
+
 ```
 go run ./core/main.go local db preparetest
 ```
