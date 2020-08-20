@@ -116,21 +116,6 @@ jobs:
         env:
           CI: true
 
-  # NOTE: will likely want to keep the following, but some setup is required
-
-  # reportcoverage:
-  #   name: Report test coverage
-  #   runs-on: ubuntu-latest
-  #   container: smartcontract/builder:1.0.34
-  #   needs: [explorer]
-  #   steps:
-  #     - name: Checkout the repo
-  #       uses: actions/checkout@v2
-  #     - name: Init GCloud
-  #       run: ./tools/ci/init_gcloud
-  #     - name: Run coverage report
-  #       run: ./tools/ci/report_coverage
-
   check_if_rebase_needed:
     name: Check if rebase needed
     runs-on: ubuntu-latest
@@ -164,29 +149,8 @@ jobs:
       - name: Run Yarn lint
         run: yarn lint
 
-  # NOTE: can likely remove the following. was ran before publishing contracts to NPM
-
-  # prepublish_npm:
-  #   name: Prepublish NPM
-  #   runs-on: self-hosted
-  #   container: smartcontract/builder:1.0.34
-  #   steps:
-  #     - name: Checkout the repo
-  #       uses: actions/checkout@v2
-  #     - name: Cache Yarn dependencies
-  #       uses: actions/cache@v1
-  #       with:
-  #         path: /usr/local/share/.cache/yarn
-  #         key: yarn-${{ env.CACHE_VERSION }}-${{ hashFiles('yarn.lock') }}
-  #         restore-keys: |
-  #           yarn-${{ env.CACHE_VERSION }}
-  #     - name: Install Yarn dependencies
-  #       run: make yarndep
-  #     - name: Run prepublish NPM test
-  #       run: ./tools/ci/prepublish_npm_test
-
-  repo-dispatch-build-publish-explorer:
-    name: Kick off build-publish-explorer workflow
+  build-publish-explorer:
+    name: Build and publish Explorer
     runs-on: ubuntu-latest
     needs:
       - styleguide
@@ -198,35 +162,32 @@ jobs:
       - name: Extract branch and tag
         id: extract_branch_and_tag
         run: tools/ci/gha_output_branch_tag
-      - name: Log for troubleshoot
-        run: |
-          echo GITHUB_REF: $GITHUB_REF
-          echo Extracted branch: ${{steps.extract_branch_and_tag.outputs.branch}}
-          echo Extracted tag: ${{steps.extract_branch_and_tag.outputs.tag}}
       - name: Docker login
         run: echo ${{ secrets.DOCKERHUB_PASS }} | docker login -u ${{ secrets.DOCKERHUB_USER }} --password-stdin
       - name: Docker build
         run: docker build -f explorer/Dockerfile -t smartcontract/explorer:gha .
       - name: Docker push, if applicable
         run: tools/ci/push_explorer "${{steps.extract_branch_and_tag.outputs.branch}}" "${{steps.extract_branch_and_tag.outputs.tag}}"
-  # build-publish-explorer:
-  #   machine:
-  #     image: circleci/classic:201808-01
-  #     docker_layer_caching: true
+  #
+  #
+  #
+  # NOTE: may want to keep report coverage, but some setup would be required
+  #
+  # reportcoverage:
+  #   name: Report test coverage
+  #   runs-on: ubuntu-latest
+  #   container: smartcontract/builder:1.0.34
+  #   needs: [explorer]
   #   steps:
-  #     - checkout
-  #     - run:
-  #         name: Docker login
-  #         command: |
-  #     - run:
-  #         name: Docker build
-  #         command:
-  #     - run:
-  #         name: Docker push, if applicable
-  #         command: |
+  #     - name: Checkout the repo
+  #       uses: actions/checkout@v2
+  #     - name: Init GCloud
+  #       run: ./tools/ci/init_gcloud
+  #     - name: Run coverage report
+  #       run: ./tools/ci/report_coverage
   #
   #
-  #
+  # NOTE: may want to use repo-dispatch action:
   #
   # repo-dispatch-build-publish-explorer:
   #   name: Kick off build-publish-explorer workflow
