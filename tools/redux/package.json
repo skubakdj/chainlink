@@ -9,7 +9,8 @@
   },
   "scripts": {
     "setup": "tsc -b",
-    "clean": "tsc -b --clean"
+    "clean": "tsc -b --clean",
+    "prepublishOnly": "yarn clean && yarn setup && rm dist/tsconfig.tsbuildinfo"
   },
   "peerDependencies": {},
   "dependencies": {
@@ -19,5 +20,9 @@
     "@types/redux-logger": "^3.0.8",
     "redux-devtools-extension": "^2.13.8",
     "redux-logger": "^3.0.6"
-  }
+  },
+  "files": [
+    "package.json",
+    "dist"
+  ]
 }

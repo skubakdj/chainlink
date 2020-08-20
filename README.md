@@ -7,6 +7,8 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/273722bb9f6f22d799bd/maintainability)](https://codeclimate.com/github/smartcontractkit/chainlink/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/273722bb9f6f22d799bd/test_coverage)](https://codeclimate.com/github/smartcontractkit/chainlink/test_coverage)
 
+`|`
+
 Chainlink is middleware to simplify communication with blockchains.
 Here you'll find the Chainlink Golang node, currently in alpha.
 This initial implementation is intended for use and review by developers,
@@ -140,6 +142,7 @@ export CHAINLINK_DEV=true # I prefer to use direnv and skip this
 ```
 
 6.  Drop/Create test database and run migrations:
+
 ```
 go run ./core/main.go local db preparetest
 ```
@@ -151,7 +154,6 @@ If you do end up modifying the migrations for the database, you will need to rer
 ```bash
 go test -parallel=1 ./...
 ```
-
 
 ### Solidity Development
 

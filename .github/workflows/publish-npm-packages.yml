@@ -1,0 +1,177 @@
+name: Publish NPM Packages
+
+on:
+  push:
+    branches:
+      - test-publish
+
+jobs:
+  styleguide:
+    name: Publish styleguide
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Use Node.js 10.16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.16.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare for publish
+        run: |
+          yarn
+          ./tools/bin/make_workspace_public styleguide
+          ./tools/bin/change_workspace_name styleguide
+
+      - name: Determine if publish is necessary
+        id: helper
+        uses: smartcontractkit/simple-module-versioner@develop
+        with:
+          mode: publish
+          folder: styleguide
+
+      - name: Publish
+        if: steps.helper.outputs.should_publish == 'yes'
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: |
+          cd styleguide
+          yarn publish  --access public --no-git-tag-version --verbose
+
+  json-api-client:
+    name: Publish json-api-client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Use Node.js 10.16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.16.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare for publish
+        run: |
+          yarn
+          ./tools/bin/make_workspace_public tools/json-api-client
+          ./tools/bin/change_workspace_name tools/json-api-client
+
+      - name: Determine if publish is necessary
+        id: helper
+        uses: smartcontractkit/simple-module-versioner@develop
+        with:
+          mode: publish
+          folder: tools/json-api-client
+
+      - name: Publish
+        if: steps.helper.outputs.should_publish == 'yes'
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: |
+          cd tools/json-api-client
+          yarn publish  --access public --no-git-tag-version --verbose
+
+  local-storage:
+    name: Publish local-storage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Use Node.js 10.16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.16.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare for publish
+        run: |
+          yarn
+          ./tools/bin/make_workspace_public tools/local-storage
+          ./tools/bin/change_workspace_name tools/local-storage
+
+      - name: Determine if publish is necessary
+        id: helper
+        uses: smartcontractkit/simple-module-versioner@develop
+        with:
+          mode: publish
+          folder: tools/local-storage
+
+      - name: Publish
+        if: steps.helper.outputs.should_publish == 'yes'
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: |
+          cd tools/local-storage
+          yarn publish  --access public --no-git-tag-version --verbose
+
+  redux:
+    name: Publish redux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Use Node.js 10.16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.16.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare for publish
+        run: |
+          yarn
+          ./tools/bin/make_workspace_public tools/redux
+          ./tools/bin/change_workspace_name tools/redux
+
+      - name: Determine if publish is necessary
+        id: helper
+        uses: smartcontractkit/simple-module-versioner@develop
+        with:
+          mode: publish
+          folder: tools/redux
+
+      - name: Publish
+        if: steps.helper.outputs.should_publish == 'yes'
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: |
+          cd tools/redux
+          yarn publish  --access public --no-git-tag-version --verbose
+
+  ts-helpers:
+    name: Publish ts-helpers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Use Node.js 10.16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10.16.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare for publish
+        run: |
+          yarn
+          ./tools/bin/make_workspace_public tools/ts-helpers
+          ./tools/bin/change_workspace_name tools/ts-helpers
+
+      - name: Determine if publish is necessary
+        id: helper
+        uses: smartcontractkit/simple-module-versioner@develop
+        with:
+          mode: publish
+          folder: tools/ts-helpers
+
+      - name: Publish
+        if: steps.helper.outputs.should_publish == 'yes'
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: |
+          cd tools/ts-helpers
+          yarn publish  --access public --no-git-tag-version --verbose

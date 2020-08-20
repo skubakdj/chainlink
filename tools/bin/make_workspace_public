@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+
+/**
+ * Simple script to mark 'private' as 'false' in a workspace's
+ * package.json so it can be published to NPM
+ */
+
+const path = require('path')
+const fs = require('fs')
+const baseDir = path.resolve(__dirname, '../..')
+const workspace = process.argv[2]
+
+try {
+  const packageJsonPath = path.resolve(baseDir, workspace, 'package.json')
+  const packageJson = require(packageJsonPath)
+
+  packageJson.private = false
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
+  console.log(`Wrote new package.json at ${packageJsonPath}`)
+} catch (e) {
+  console.error('Something went wrong:\n\n', e.stack)
+  process.exit(1)
+}
