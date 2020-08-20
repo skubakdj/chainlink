@@ -3,12 +3,7 @@ version: '3.5'
 services:
   integration:
     container_name: integration-tests
-    image: smartcontract/integration
-    build:
-      context: ../../
-      dockerfile: tools/docker/integration.Dockerfile
-      args:
-        - SRCROOT
+    image: smartcontract/integration:${CHAINLINK_DOCKER_TAG}
     volumes:
       # Forwards the local Docker socket to the container.
       - /var/run/docker.sock:/var/run/docker.sock
@@ -34,23 +29,13 @@ services:
 
   echo-server:
     container_name: echo-server
-    image: smartcontract/echo-server
-    build:
-      context: ../../
-      dockerfile: tools/echo-server/Dockerfile
-      args:
-        - SRCROOT
+    image: smartcontract/echo-server:${CHAINLINK_DOCKER_TAG}
     environment:
       - PORT=$ECHO_SERVER_PORT
 
   cypress-job-server:
     container_name: cypress-job-server
-    image: smartcontract/cypress-job-server
-    build:
-      context: ../../
-      dockerfile: tools/cypress-job-server/Dockerfile
-      args:
-        - SRCROOT
+    image: smartcontract/cypress-job-server:${CHAINLINK_DOCKER_TAG}
     command: '{\"last\":\ \"3843.95\"}'
     ports:
       - '6692:6692'
@@ -59,10 +44,7 @@ services:
 
   external-adapter:
     container_name: external-adapter
-    image: smartcontract/external-adapter
-    build:
-      context: ../../
-      dockerfile: tools/external-adapter/Dockerfile
+    image: smartcontract/external-adapter:${CHAINLINK_DOCKER_TAG}
     ports:
       - '6644:6644'
     environment:
