@@ -3,10 +3,7 @@ version: '3.5'
 services:
   node:
     container_name: chainlink-node
-    image: smartcontract/chainlink
-    build:
-      context: ../../
-      dockerfile: core/chainlink.Dockerfile
+    image: smartcontract/chainlink:${CHAINLINK_DOCKER_TAG}
     command: node start -d -p /run/secrets/node_password -a /run/secrets/apicredentials
     restart: always
     environment:
@@ -38,10 +35,7 @@ services:
 
   node-2:
     container_name: chainlink-node-2
-    image: smartcontract/chainlink
-    build:
-      context: ../../
-      dockerfile: core/chainlink.Dockerfile
+    image: smartcontract/chainlink:${CHAINLINK_DOCKER_TAG}
     command: node start -d -p /run/secrets/node_password -a /run/secrets/apicredentials
     restart: always
     environment:
@@ -98,10 +92,7 @@ services:
 
   ingester:
     container_name: chainlink-ingester
-    image: chainlink/ingester
-    build:
-      context: ../../
-      dockerfile: ingester/ingester.Dockerfile
+    image: smartcontract/ingester:${CHAINLINK_DOCKER_TAG}
     restart: always
     depends_on:
       - explorer-db
