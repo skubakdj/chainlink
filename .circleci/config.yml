@@ -372,11 +372,11 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
       - run:
           name: Docker build
-          command: docker build -f tools/docker/integration.Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/integration:circleci .
+          command: docker build -f tools/docker/integration.Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/test-integration:circleci .
       - run:
           name: Docker push, if applicable
           command: |
-            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" integration
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-integration
   build-publish-cypress-job-server:
     # resource_class: large
     machine:
@@ -390,11 +390,11 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
       - run:
           name: Docker build
-          command: docker build -f tools/cypress-job-server/Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/cypress-job-server:circleci .
+          command: docker build -f tools/cypress-job-server/Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/test-cypress-job-server:circleci .
       - run:
           name: Docker push, if applicable
           command: |
-            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" cypress-job-server
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-cypress-job-server
   build-publish-echo-server:
     # resource_class: large
     machine:
@@ -408,11 +408,11 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
       - run:
           name: Docker build
-          command: docker build -f tools/echo-server/Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/echo-server:circleci .
+          command: docker build -f tools/echo-server/Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/test-echo-server:circleci .
       - run:
           name: Docker push, if applicable
           command: |
-            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" echo-server
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-echo-server
   build-publish-external-adapter:
     # resource_class: large
     machine:
@@ -426,11 +426,11 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
       - run:
           name: Docker build
-          command: docker build -f tools/external-adapter/Dockerfile -t testing4638/external-adapter:circleci .
+          command: docker build -f tools/external-adapter/Dockerfile -t testing4638/test-external-adapter:circleci .
       - run:
           name: Docker push, if applicable
           command: |
-            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" external-adapter
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-external-adapter
   build-publish-ingester:
     # resource_class: large
     machine:
