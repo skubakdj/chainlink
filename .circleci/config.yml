@@ -326,10 +326,10 @@ jobs:
           command: |
             tools/ci/push_explorer "${CIRCLE_BRANCH}" "${CIRCLE_TAG}"
   build-publish-chainlink:
-    resource_class: large
+    resource_class: medium
     machine:
       image: circleci/classic:201808-01
-      docker_layer_caching: true
+      # docker_layer_caching: true
     steps:
       - checkout
       - run:
@@ -359,6 +359,96 @@ jobs:
           name: Docker build
           command: |
             SGX_ENABLED=yes DOCKER_TAG=circleci make docker
+  build-publish-integration:
+    # resource_class: large
+    machine:
+      image: circleci/classic:201808-01
+      # docker_layer_caching: true
+    steps:
+      - checkout
+      - run:
+          name: Docker login
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+      - run:
+          name: Docker build
+          command: docker build -f tools/docker/integration.Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/test-integration:circleci .
+      - run:
+          name: Docker push, if applicable
+          command: |
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-integration
+  build-publish-cypress-job-server:
+    # resource_class: large
+    machine:
+      image: circleci/classic:201808-01
+      # docker_layer_caching: true
+    steps:
+      - checkout
+      - run:
+          name: Docker login
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+      - run:
+          name: Docker build
+          command: docker build -f tools/cypress-job-server/Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/test-cypress-job-server:circleci .
+      - run:
+          name: Docker push, if applicable
+          command: |
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-cypress-job-server
+  build-publish-echo-server:
+    # resource_class: large
+    machine:
+      image: circleci/classic:201808-01
+      # docker_layer_caching: true
+    steps:
+      - checkout
+      - run:
+          name: Docker login
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+      - run:
+          name: Docker build
+          command: docker build -f tools/echo-server/Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/test-echo-server:circleci .
+      - run:
+          name: Docker push, if applicable
+          command: |
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-echo-server
+  build-publish-external-adapter:
+    # resource_class: large
+    machine:
+      image: circleci/classic:201808-01
+      # docker_layer_caching: true
+    steps:
+      - checkout
+      - run:
+          name: Docker login
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+      - run:
+          name: Docker build
+          command: docker build -f tools/external-adapter/Dockerfile -t testing4638/test-external-adapter:circleci .
+      - run:
+          name: Docker push, if applicable
+          command: |
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-external-adapter
+  build-publish-ingester:
+    # resource_class: large
+    machine:
+      image: circleci/classic:201808-01
+      # docker_layer_caching: true
+    steps:
+      - checkout
+      - run:
+          name: Docker login
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+      - run:
+          name: Docker build
+          command: docker build -f ingester/ingester.Dockerfile -t testing4638/ingester:circleci .
+      - run:
+          name: Docker push, if applicable
+          command: |
+            tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" ingester
   reportcoverage:
     docker:
       - image: smartcontract/builder:1.0.33
@@ -416,127 +506,162 @@ workflows:
   version: 2
   test:
     jobs:
-      - check_if_rebase_needed:
+      # - check_if_rebase_needed:
+      #     filters:
+      #       tags:
+      #         ignore:
+      #           - /^v.*/
+      #           - /^explorer-v.*/
+      #       branches:
+      #         ignore:
+      #           - develop
+      #           - /^release\/.*/
+      #           - master
+      #           - /^hotfix\/.*/
+      # - core-go-test-race:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - core-go-test:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - solidity:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - geth-postgres:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - geth-postgres-ts:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - parity-postgres:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - parity-postgres-ts:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - styleguide:
+      #     filters:
+      #       tags:
+      #         only:
+      #           - /^v.*/
+      #           - /^explorer-v.*/
+      # - json-api-client:
+      #     filters:
+      #       tags:
+      #         only:
+      #           - /^v.*/
+      #           - /^explorer-v.*/
+      # - operator-ui:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - rust:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - explorer:
+      #     filters: # all branches, and /^explorer-v../ tags for build-publish...
+      #       tags:
+      #         only: /^explorer-v.*/
+      # - feeds:
+      #     filters:
+      #       tags:
+      #         only:
+      #           - /^v.*/
+      #           - /^explorer-v.*/
+      # - lint:
+      #     filters:
+      #       tags:
+      #         only:
+      #           - /^v.*/
+      #           - /^explorer-v.*/
+      # - prepublish_npm:
+      #     filters:
+      #       tags:
+      #         only:
+      #           - /^v.*/
+      #           - /^explorer-v.*/
+      # - build-publish-explorer:
+      #     requires:
+      #       - styleguide
+      #       - json-api-client
+      #       - explorer
+      #     filters:
+      #       tags:
+      #         only: /^explorer-v.*/
+      # - build-chainlink-sgx:
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      # - build-publish-chainlink:
+      #     requires:
+      #       - core-go-test
+      #       - geth-postgres
+      #       - parity-postgres
+      #       - styleguide
+      #       - json-api-client
+      #       - operator-ui
+      #       - rust
+      #     filters:
+      #       tags:
+      #         only: /^v.*/
+      - build-publish-integration:
           filters:
             tags:
-              ignore:
-                - /^v.*/
-                - /^explorer-v.*/
+              only: /^v.*/
             branches:
-              ignore:
+              only:
                 - develop
-                - /^release\/.*/
-                - master
-                - /^hotfix\/.*/
-      - core-go-test-race:
+      - build-publish-cypress-job-server:
           filters:
             tags:
               only: /^v.*/
-      - core-go-test:
-          filters:
-            tags:
-              only: /^v.*/
-      - solidity:
-          filters:
-            tags:
-              only: /^v.*/
-      - geth-postgres:
-          filters:
-            tags:
-              only: /^v.*/
-      - geth-postgres-ts:
-          filters:
-            tags:
-              only: /^v.*/
-      - parity-postgres:
-          filters:
-            tags:
-              only: /^v.*/
-      - parity-postgres-ts:
-          filters:
-            tags:
-              only: /^v.*/
-      - styleguide:
-          filters:
-            tags:
-              only:
-                - /^v.*/
-                - /^explorer-v.*/
-      - json-api-client:
-          filters:
-            tags:
-              only:
-                - /^v.*/
-                - /^explorer-v.*/
-      - operator-ui:
-          filters:
-            tags:
-              only: /^v.*/
-      - rust:
-          filters:
-            tags:
-              only: /^v.*/
-      - explorer:
-          filters: # all branches, and /^explorer-v../ tags for build-publish...
-            tags:
-              only: /^explorer-v.*/
-      - feeds:
-          filters:
-            tags:
-              only:
-                - /^v.*/
-                - /^explorer-v.*/
-      - lint:
-          filters:
-            tags:
-              only:
-                - /^v.*/
-                - /^explorer-v.*/
-      - prepublish_npm:
-          filters:
-            tags:
-              only:
-                - /^v.*/
-                - /^explorer-v.*/
-      - build-publish-explorer:
-          requires:
-            - styleguide
-            - json-api-client
-            - explorer
-          filters:
-            tags:
-              only: /^explorer-v.*/
-      - build-chainlink-sgx:
-          filters:
-            tags:
-              only: /^v.*/
-      - build-publish-chainlink:
-          requires:
-            - core-go-test
-            - geth-postgres
-            - parity-postgres
-            - styleguide
-            - json-api-client
-            - operator-ui
-            - rust
-          filters:
-            tags:
-              only: /^v.*/
-      - reportcoverage:
-          requires:
-            - core-go-test
-            - solidity
-            - operator-ui
-            - rust
-            - explorer
-          filters:
-            tags:
-              ignore:
-                - /^v.*/
-                - /^explorer-v.*/
             branches:
-              ignore:
+              only:
                 - develop
-                - /^release\/.*/
-                - master
-                - /^hotfix\/.*/
+      - build-publish-echo-server:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only:
+                - develop
+      - build-publish-external-adapter:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only:
+                - develop
+      - build-publish-ingester:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only:
+                - develop
+      # - reportcoverage:
+      #     requires:
+      #       - core-go-test
+      #       - solidity
+      #       - operator-ui
+      #       - rust
+      #       - explorer
+      #     filters:
+      #       tags:
+      #         ignore:
+      #           - /^v.*/
+      #           - /^explorer-v.*/
+      #       branches:
+      #         ignore:
+      #           - develop
+      #           - /^release\/.*/
+      #           - master
+      #           - /^hotfix\/.*/
