@@ -390,7 +390,7 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
       - run:
           name: Docker build
-          command: docker build -f tools/docker/ts-integration.Dockerfile --build-arg SRCROOT=/chainlink -t smartcontract/test-ts-integration:circleci .
+          command: docker build -f tools/docker/ts-integration.Dockerfile --build-arg SRCROOT=/chainlink -t testing4638/test-ts-integration:circleci .
       - run:
           name: Docker push, if applicable
           command: |
