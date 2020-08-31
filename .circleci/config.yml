@@ -378,10 +378,10 @@ jobs:
           command: |
             tools/ci/push_image "${CIRCLE_BRANCH}" "${CIRCLE_TAG}" test-integration
   build-publish-ts-integration:
-    resource_class: large
+    # resource_class: large
     machine:
       image: circleci/classic:201808-01
-      docker_layer_caching: true
+      # docker_layer_caching: true
     steps:
       - checkout
       - run:
