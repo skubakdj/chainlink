@@ -23,7 +23,7 @@ jobs:
       - name: Checkout the repo
         uses: actions/checkout@v2
       - name: Run tests
-        run: cd ./tools/docker && timeout --foreground 1200s ./compose ${{ matrix.test }}
+        run: cd ./tools/docker && timeout --foreground 4800s ./compose ${{ matrix.test }}
       - name: Store logs artifacts
         uses: actions/upload-artifact@v1
         with:
