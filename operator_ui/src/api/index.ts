@@ -1,4 +1,4 @@
-import { Api } from '@chainlink/json-api-client'
+import { Api } from '@testing4638/json-api-client'
 import { Sessions } from './sessions'
 import { V2 } from './v2'
 

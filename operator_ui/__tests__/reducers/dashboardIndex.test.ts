@@ -1,4 +1,4 @@
-import { partialAsFull } from '@chainlink/ts-helpers'
+import { partialAsFull } from '@testing4638/ts-helpers'
 import reducer, { INITIAL_STATE } from '../../src/reducers'
 import {
   UpsertRecentJobRunsAction,

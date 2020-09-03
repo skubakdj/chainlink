@@ -1,4 +1,4 @@
-import { partialAsFull } from '@chainlink/ts-helpers'
+import { partialAsFull } from '@testing4638/ts-helpers'
 import * as models from 'core/store/models'
 import { bindActionCreators, Middleware } from 'redux'
 import configureStore from 'redux-mock-store'

@@ -14,7 +14,7 @@ module.exports = {
     '<rootDir>/__tests__/.eslintrc.js',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(@chainlink/json-api-client|@chainlink/local-storage|@chainlink/styleguide|@chainlink/redux)/)',
+    'node_modules/(?!(@testing4638/json-api-client|@testing4638/local-storage|@testing4638/styleguide|@testing4638/redux)/)',
   ],
   moduleNameMapper: {
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':

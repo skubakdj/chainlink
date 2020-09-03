@@ -1,6 +1,6 @@
 import { PropsWithChildren } from 'react'
 import { Reducer } from 'redux'
-import * as jsonapi from '@chainlink/json-api-client'
+import * as jsonapi from '@testing4638/json-api-client'
 import {
   Actions,
   NotifyErrorAction,

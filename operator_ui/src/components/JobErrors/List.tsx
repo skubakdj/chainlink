@@ -1,4 +1,4 @@
-import { localizedTimestamp, TimeAgo } from '@chainlink/styleguide'
+import { localizedTimestamp, TimeAgo } from '@testing4638/styleguide'
 import Card from '@material-ui/core/Card'
 import Table from '@material-ui/core/Table'
 import TableBody from '@material-ui/core/TableBody'
