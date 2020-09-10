@@ -18,6 +18,8 @@ set -e
 branch=`echo $1 | awk '{print tolower($0)}'`
 if [ "${branch}" = "develop" ]; then
   echo develop
+elif [ "${branch}" = "test-docker" ]; then
+  echo testing
 elif [ "${branch}" = "master" ]; then
   echo latest
 elif [[ "${branch}" =~ ^release(s)?\/([^-]+-)?(.+)$ ]]; then

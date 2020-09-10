@@ -140,6 +140,7 @@ export CHAINLINK_DEV=true # I prefer to use direnv and skip this
 ```
 
 6.  Drop/Create test database and run migrations:
+
 ```
 go run ./core/main.go local db preparetest
 ```
@@ -151,7 +152,6 @@ If you do end up modifying the migrations for the database, you will need to rer
 ```bash
 go test -parallel=1 ./...
 ```
-
 
 ### Solidity Development
 
